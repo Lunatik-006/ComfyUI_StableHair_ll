@@ -48,6 +48,7 @@ class LoadStableHairRemoverModel:
     CATEGORY = "hair/transfer"
 
     def load_model(self, ckpt_name, bald_model, device):
+        model_management.vram_optimization_level = 2
         model_management.soft_empty_cache()
         sd15_model_path = folder_paths.get_full_path_or_raise("checkpoints", ckpt_name)
         bald_model_path = folder_paths.get_full_path_or_raise("diffusers", hair_model_path_format.format(bald_model))
