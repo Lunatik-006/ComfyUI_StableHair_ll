@@ -49,6 +49,7 @@ class LoadStableHairRemoverModel:
 
     def load_model(self, ckpt_name, bald_model, device):
         model_management.soft_empty_cache()
+        model_management.vram_optimization_level = 2
         sd15_model_path = folder_paths.get_full_path_or_raise("checkpoints", ckpt_name)
         bald_model_path = folder_paths.get_full_path_or_raise("diffusers", hair_model_path_format.format(bald_model))
         if device == "AUTO":
@@ -109,6 +110,7 @@ class LoadStableHairTransferModel:
 
     def load_model(self, ckpt_name, encoder_model, adapter_model, control_model, device):
         model_management.soft_empty_cache()
+        model_management.vram_optimization_level = 2
         sd15_model_path = folder_paths.get_full_path_or_raise("checkpoints", ckpt_name)
         encoder_model_path = folder_paths.get_full_path_or_raise("diffusers",
                                                                  hair_model_path_format.format(encoder_model))
