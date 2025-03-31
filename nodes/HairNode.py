@@ -1,6 +1,6 @@
 import os
+
 from sympy.stats.sampling.sample_numpy import numpy
-import torch
 
 from comfy import model_management
 import folder_paths
@@ -21,6 +21,7 @@ hair_model_path_format = 'StableHair/{}'
 
 
 class LoadStableHairRemoverModel:
+
     @classmethod
     def INPUT_TYPES(cls):
         model_paths = []
@@ -47,7 +48,6 @@ class LoadStableHairRemoverModel:
     CATEGORY = "hair/transfer"
 
     def load_model(self, ckpt_name, bald_model, device):
-        model_management.vram_optimization_level = 2
         model_management.soft_empty_cache()
         sd15_model_path = folder_paths.get_full_path_or_raise("checkpoints", ckpt_name)
         bald_model_path = folder_paths.get_full_path_or_raise("diffusers", hair_model_path_format.format(bald_model))
@@ -79,6 +79,7 @@ class LoadStableHairRemoverModel:
 
 
 class LoadStableHairTransferModel:
+
     @classmethod
     def INPUT_TYPES(cls):
         model_paths = []
@@ -109,9 +110,12 @@ class LoadStableHairTransferModel:
     def load_model(self, ckpt_name, encoder_model, adapter_model, control_model, device):
         model_management.soft_empty_cache()
         sd15_model_path = folder_paths.get_full_path_or_raise("checkpoints", ckpt_name)
-        encoder_model_path = folder_paths.get_full_path_or_raise("diffusers", hair_model_path_format.format(encoder_model))
-        adapter_model_path = folder_paths.get_full_path_or_raise("diffusers", hair_model_path_format.format(adapter_model))
-        control_model_path = folder_paths.get_full_path_or_raise("diffusers", hair_model_path_format.format(control_model))
+        encoder_model_path = folder_paths.get_full_path_or_raise("diffusers",
+                                                                 hair_model_path_format.format(encoder_model))
+        adapter_model_path = folder_paths.get_full_path_or_raise("diffusers",
+                                                                 hair_model_path_format.format(adapter_model))
+        control_model_path = folder_paths.get_full_path_or_raise("diffusers",
+                                                                 hair_model_path_format.format(control_model))
         if device == "AUTO":
             device_type = deviceType
         else:
@@ -150,6 +154,7 @@ class LoadStableHairTransferModel:
 
 
 class ApplyHairRemover:
+
     @classmethod
     def INPUT_TYPES(cls):
         return {
@@ -172,10 +177,13 @@ class ApplyHairRemover:
 
     def apply(self, bald_model, images, seed, steps, strength, cfg=1.5):
         _images = []
+        _masks = []
 
         for image in images:
+            # h, w, c -> c, h, w
             H, W, c = image.shape
             im_tensor = image.permute(2, 0, 1)
+            # 随记种子
             generator = torch.Generator(device=bald_model.device)
             generator.manual_seed(seed)
             comfy_pbar = ProgressBar(steps)
@@ -184,6 +192,7 @@ class ApplyHairRemover:
                 comfy_pbar.update(1)
 
             with torch.no_grad():
+                # 采样，变光头
                 result_image = bald_model(
                     prompt="",
                     negative_prompt="",
@@ -199,13 +208,18 @@ class ApplyHairRemover:
                     callback=callback_bar,
                 )[0]
 
+            # b, c, h, w -> b, h, w, c
             result_image = result_image.permute(0, 2, 3, 1)
+
             _images.append(result_image)
 
-        return torch.cat(_images, dim=0),
+        out_images = torch.cat(_images, dim=0)
+
+        return out_images,
 
 
 class ApplyHairTransfer:
+
     @classmethod
     def INPUT_TYPES(cls):
         return {
@@ -228,11 +242,17 @@ class ApplyHairTransfer:
 
     def apply(self, model, images, bald_image, seed, steps, cfg, control_strength, adapter_strength):
         _images = []
+        _masks = []
 
         for image in images:
             h, w, c = image.shape
 
+            prompt = ""
+            n_prompt = ""
+
+            # 设置adapter强度
             set_scale(model.unet, adapter_strength)
+            # 随记种子
             generator = torch.Generator(device=model.device)
             generator.manual_seed(seed)
             comfy_pbar = ProgressBar(steps)
@@ -243,9 +263,10 @@ class ApplyHairTransfer:
             ref_image_np = (image.cpu().numpy() * 255).astype(numpy.uint8)
             bald_image_np = (bald_image.squeeze(0).cpu().numpy() * 255).astype(numpy.uint8)
             with torch.no_grad():
+                # 采样，转移发型
                 result_image = model(
-                    prompt="",
-                    negative_prompt="",
+                    prompt,
+                    negative_prompt=n_prompt,
                     num_inference_steps=steps,
                     guidance_scale=cfg,
                     width=w,
@@ -259,10 +280,14 @@ class ApplyHairTransfer:
                     return_dict=False
                 )
 
+            # b, h, w, c
             result_image = result_image.unsqueeze(0)
+
             _images.append(result_image)
 
-        return torch.cat(_images, dim=0),
+        out_images = torch.cat(_images, dim=0)
+
+        return out_images,
 
 
 NODE_CLASS_MAPPINGS = {
