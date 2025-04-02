@@ -819,6 +819,8 @@ class ControlNetModel(ModelMixin, ConfigMixin, FromOriginalControlnetMixin):
         ## v2
         sample = self.conv_in(sample)
         controlnet_cond = self.conv_in_2(controlnet_cond)
+        if controlnet_cond.shape[-2:] != sample.shape[-2:]:
+            controlnet_cond = F.interpolate(controlnet_cond, size=sample.shape[-2:], mode='bilinear', align_corners=False)
         sample = sample + controlnet_cond
 
         # 3. down
