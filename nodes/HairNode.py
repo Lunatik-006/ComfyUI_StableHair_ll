@@ -164,7 +164,7 @@ class ApplyHairRemover:
                 "bald_model": ("BALD_MODEL",),
                 "images": ("IMAGE",),
                 "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
-                "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
+                "steps": ("INT", {"default": 30, "min": 1, "max": 10000}),
                 "strength": ("FLOAT", {"default": 1.5, "min": 0.0, "max": 5.0, "step": 0.01}),
             },
             "optional": {
@@ -230,7 +230,7 @@ class ApplyHairTransfer:
                 "images": ("IMAGE",),
                 "bald_image": ("IMAGE",),
                 "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
-                "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
+                "steps": ("INT", {"default": 50, "min": 1, "max": 10000}),
                 "cfg": ("FLOAT", {"default": 1.5, "min": 0.0, "max": 100.0, "step": 0.1, "round": 0.01}),
                 "control_strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 5.0, "step": 0.01}),
                 "adapter_strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 5.0, "step": 0.01}),
